@@ -28,7 +28,24 @@ from app.infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
-_ROOT_DIR: Path = Path(__file__).resolve().parents[2]
+
+def _get_app_root() -> Path:
+    """Return the application root directory.
+
+    Works both when running as a normal script and when
+    bundled with PyInstaller (--onedir or --onefile).
+    """
+    import sys
+    if getattr(sys, "frozen", False):
+        # PyInstaller stores the bundle in sys._MEIPASS (onefile)
+        # or the exe's directory (onedir). We want the directory
+        # containing the exe so runtime files (config.ini, output/)
+        # are stored next to it — not inside the temp extract folder.
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
+
+
+_ROOT_DIR: Path = _get_app_root()
 
 
 class ConfigManager:
@@ -105,8 +122,19 @@ class ConfigManager:
         logger.info("Created default config at %s", self._config_path)
 
     def _load_json_config(self, filename: str) -> dict:
-        """Load a JSON file from the config/ directory."""
+        """Load a JSON file from the config/ directory.
+
+        For PyInstaller bundles, bundled config files live inside
+        sys._MEIPASS while user-editable ones may sit next to the exe.
+        We prefer the exe-side copy (user may have edited it) and
+        fall back to the bundled copy.
+        """
+        import sys
         json_path = self._root_dir / "config" / filename
+        if not json_path.exists() and getattr(sys, "frozen", False):
+            # Try the bundled data directory
+            bundle_dir = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+            json_path = bundle_dir / "config" / filename
         if not json_path.exists():
             logger.warning("Config file not found: %s", json_path)
             return {}

@@ -14,7 +14,16 @@ from pathlib import Path
 
 from app.domain.constants import LOG_MAX_BYTES, LOG_RETENTION_DAYS, LOGS_DIR
 
-_ROOT_DIR: Path = Path(__file__).resolve().parents[2]
+
+def _get_app_root() -> Path:
+    """Return the application root — handles PyInstaller frozen mode."""
+    import sys
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
+
+
+_ROOT_DIR: Path = _get_app_root()
 _LOG_DIR: Path = _ROOT_DIR / LOGS_DIR
 
 
