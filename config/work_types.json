@@ -1,0 +1,48 @@
+{
+  "work_types": [
+    {
+      "code": "DT_AUGMENTATION",
+      "display_name": "DT Augmentation",
+      "sub_head": "LT Augmentation",
+      "priority": 1,
+      "detection": {
+        "bom_keywords": ["TRANSFORMER"],
+        "nature_keywords": ["AUGMENTATION", "HT SCHEME"]
+      },
+      "major_material_priority": ["TRANSFORMER", "ACB", "CABLE", "POLE"]
+    },
+    {
+      "code": "ABC_WIRING",
+      "display_name": "ABC Cable + Standard Cable Mix",
+      "sub_head": "LT Line Extension up to 5 Poles",
+      "priority": 2,
+      "detection": {
+        "bom_keywords": ["ABC", "AERIAL BUNCHED", "4X150", "4*150"],
+        "nature_keywords": []
+      },
+      "major_material_priority": ["CABLE", "POLE", "DIST.BOX"]
+    },
+    {
+      "code": "LT_HT_POLE",
+      "display_name": "LT Extension with HT/PSCC Poles",
+      "sub_head": "LT Line Extension up to 5 Poles",
+      "priority": 3,
+      "detection": {
+        "bom_keywords": ["2X25", "2CX25", "2 X 25"],
+        "nature_keywords": []
+      },
+      "major_material_priority": ["CABLE", "POLE", "DIST.BOX"]
+    },
+    {
+      "code": "LT_STANDARD",
+      "display_name": "LT Line Extension (Standard)",
+      "sub_head": "LT Line Extension up to 5 Poles",
+      "priority": 4,
+      "detection": {
+        "bom_keywords": [],
+        "nature_keywords": []
+      },
+      "major_material_priority": ["CABLE", "POLE", "DIST.BOX"]
+    }
+  ]
+}

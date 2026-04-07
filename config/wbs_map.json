@@ -1,0 +1,22 @@
+{
+  "CE/N0000/00133": {
+    "description": "City Circle New Connection 2026-27",
+    "districts": ["MTN"]
+  },
+  "CE/N0000/00134": {
+    "description": "Town Circle New Connection 2026-27",
+    "districts": ["CVL", "MDT", "KPM"]
+  },
+  "CE/N0000/00135": {
+    "description": "Metro Circle New Connection 2026-27",
+    "districts": ["PPR", "MGP", "KRR"]
+  },
+  "CE/N0000/00136": {
+    "description": "Urban Circle New Connection 2026-27",
+    "districts": ["BDL", "SMB", "RHN"]
+  },
+  "CE/N0000/00137": {
+    "description": "Sub Urban New Connection 2026-27",
+    "districts": ["NRL", "BWN"]
+  }
+}

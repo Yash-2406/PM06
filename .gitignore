@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Project runtime
+*.db
+*.db-shm
+*.db-wal
+config.ini
+logs/*.log*
+backups/
+recovery/
+
+# Data & output (large / generated)
+PM06/
+output/*.docx
+output/*.xlsx
+output/*.png
+output/*.txt
+output/*.db
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Data files
+*.xlsx
