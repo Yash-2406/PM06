@@ -132,7 +132,9 @@ VALID_CATEGORIES: set[str] = {"DOMESTIC", "COMMERCIAL", "INDUSTRIAL", "AGRICULTU
 # String literals used in multiple places
 # ---------------------------------------------------------------------------
 
-APP_TITLE: str = "TPDDL PM06 Executive Summary Generator and Tracker"
+from app import __version__
+
+APP_TITLE: str = f"TPDDL PM06 Executive Summary Generator v{__version__}"
 DB_FILENAME: str = "tpddl_mpg.db"
 TRACKER_FILENAME: str = "New_Connection_FY26.xlsx"
 

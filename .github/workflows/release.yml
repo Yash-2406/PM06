@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Run tests
+        run: pytest tests/ -q --tb=short
+
+      - name: Build with PyInstaller
+        run: pyinstaller pm06_tool.spec --noconfirm
+
+      - name: Copy config to dist
+        run: |
+          Copy-Item -Path config\*.json -Destination dist\PM06_Tool\config\ -Force
+          Copy-Item -Path diagnose.py -Destination dist\PM06_Tool\ -Force
+          Copy-Item -Path setup.bat -Destination dist\PM06_Tool\ -Force
+
+      - name: Create zip
+        run: Compress-Archive -Path dist\PM06_Tool -DestinationPath dist\PM06_Tool-${{ github.ref_name }}.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/PM06_Tool-${{ github.ref_name }}.zip
+          generate_release_notes: true

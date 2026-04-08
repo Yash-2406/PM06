@@ -18,6 +18,7 @@ from app.domain.constants import APP_TITLE
 from app.domain.models import Case
 from app.infrastructure.config_manager import ConfigManager
 from app.infrastructure.recovery_manager import RecoveryManager
+from app.infrastructure.update_checker import check_for_update
 from app.services.export_service import ExportService
 from app.services.generator_service import GeneratorService
 from app.services.tracker_service import TrackerService
@@ -177,4 +178,32 @@ class MainWindow:
     def run(self) -> None:
         """Start the Tkinter main loop."""
         logger.info("Application started")
+        check_for_update(self._on_update_available)
         self._root.mainloop()
+
+    # ── Update notification ─────────────────────────────────────
+
+    def _on_update_available(self, version: str, url: str) -> None:
+        """Show a non-blocking update banner (called from background thread)."""
+        def _show() -> None:
+            import webbrowser
+            bar = ttk.Frame(self._root, bootstyle="info")
+            bar.pack(fill="x", side="bottom", padx=5, pady=(0, 5))
+            ttk.Label(
+                bar,
+                text=f"  Update available: {version}",
+                bootstyle="inverse-info",
+            ).pack(side="left", padx=5, pady=3)
+            ttk.Button(
+                bar,
+                text="Download",
+                bootstyle="info",
+                command=lambda: webbrowser.open(url),
+            ).pack(side="left", padx=5, pady=3)
+            ttk.Button(
+                bar,
+                text="✕",
+                bootstyle="info-link",
+                command=bar.destroy,
+            ).pack(side="right", padx=5, pady=3)
+        self._root.after(0, _show)
