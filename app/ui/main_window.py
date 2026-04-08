@@ -58,7 +58,7 @@ class MainWindow:
         )
 
         # Restore geometry
-        saved_geom = self._config.get("UI", "geometry", fallback=None)
+        saved_geom = self._config.get("Window", "geometry", fallback=None)
         if saved_geom:
             try:
                 self._root.geometry(saved_geom)
@@ -169,7 +169,7 @@ class MainWindow:
     def _on_close(self) -> None:
         # Save window geometry
         try:
-            self._config.set("UI", "geometry", self._root.geometry())
+            self._config.set("Window", "geometry", self._root.geometry())
             self._config.save()
         except Exception:
             pass

@@ -77,13 +77,21 @@ class SettingsTab(ttk.Frame):
             side=LEFT
         )
 
-        # Save button
+        # Save button row
+        btn_row = ttk.Frame(general_frame)
+        btn_row.pack(pady=(10, 0))
         ttk.Button(
-            general_frame,
+            btn_row,
             text="Save Settings",
             command=self._save_settings,
             bootstyle="success",
-        ).pack(pady=(10, 0))
+        ).pack(side=LEFT, padx=(0, 10))
+        ttk.Button(
+            btn_row,
+            text="Reset to Defaults",
+            command=self._reset_defaults,
+            bootstyle="danger-outline",
+        ).pack(side=LEFT)
 
         # ── Zone-District Map ───────────────────────────────────
         zone_frame = ttk.LabelFrame(self, text="Zone \u2192 District Mapping")
@@ -133,6 +141,24 @@ class SettingsTab(ttk.Frame):
             show_info("Settings Saved", "Your settings have been saved.", parent=self)
         except Exception as e:
             show_error("Save Failed", str(e), parent=self)
+
+    def _reset_defaults(self) -> None:
+        from tkinter import messagebox
+        if not messagebox.askyesno(
+            "Reset to Defaults",
+            "This will reset all settings to factory defaults.\nAre you sure?",
+            parent=self,
+        ):
+            return
+        try:
+            self._config.reset_to_defaults()
+            # Refresh UI fields
+            self._name_var.set(self._config.engineer_name or "")
+            self._dir_var.set(str(self._config.output_dir))
+            self._font_var.set(int(self._config.get("General", "font_size", fallback="11")))
+            show_info("Reset Complete", "Settings have been reset to defaults.", parent=self)
+        except Exception as e:
+            show_error("Reset Failed", str(e), parent=self)
 
     def _save_zone_map(self) -> None:
         try:

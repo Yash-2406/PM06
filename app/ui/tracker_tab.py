@@ -74,6 +74,26 @@ class TrackerTab(ttk.Frame):
             side=LEFT, padx=(0, 10)
         )
 
+        # Date range filter row
+        date_frame = ttk.Frame(self)
+        date_frame.pack(fill=X, padx=15, pady=(0, 5))
+
+        ttk.Label(date_frame, text="From:").pack(side=LEFT, padx=(0, 5))
+        self._date_from_var = tk.StringVar()
+        ttk.Entry(
+            date_frame, textvariable=self._date_from_var, width=12
+        ).pack(side=LEFT, padx=(0, 10))
+
+        ttk.Label(date_frame, text="To:").pack(side=LEFT, padx=(0, 5))
+        self._date_to_var = tk.StringVar()
+        ttk.Entry(
+            date_frame, textvariable=self._date_to_var, width=12
+        ).pack(side=LEFT, padx=(0, 10))
+
+        ttk.Label(
+            date_frame, text="(dd-mm-yyyy)", bootstyle="secondary", font=("Calibri", 8)
+        ).pack(side=LEFT, padx=(0, 10))
+
         ttk.Button(
             filter_frame,
             text="🔍 Filter",
@@ -154,8 +174,27 @@ class TrackerTab(ttk.Frame):
             except ValueError:
                 pass
 
+        # Parse date range (dd-mm-yyyy → yyyy-mm-dd for DB)
+        date_from_db = None
+        date_to_db = None
+        raw_from = self._date_from_var.get().strip()
+        raw_to = self._date_to_var.get().strip()
+        try:
+            if raw_from:
+                d = datetime.strptime(raw_from, "%d-%m-%Y")
+                date_from_db = d.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+        try:
+            if raw_to:
+                d = datetime.strptime(raw_to, "%d-%m-%Y")
+                date_to_db = d.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
         cases = self._tracker.list_cases(
-            district=district_filter, status=status_filter
+            district=district_filter, status=status_filter,
+            date_from=date_from_db, date_to=date_to_db,
         )
 
         # Apply text search
@@ -220,6 +259,24 @@ class TrackerTab(ttk.Frame):
             except ValueError:
                 pass
 
+        # Parse date range from filter bar
+        date_from_db = None
+        date_to_db = None
+        raw_from = self._date_from_var.get().strip()
+        raw_to = self._date_to_var.get().strip()
+        try:
+            if raw_from:
+                d = datetime.strptime(raw_from, "%d-%m-%Y")
+                date_from_db = d.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+        try:
+            if raw_to:
+                d = datetime.strptime(raw_to, "%d-%m-%Y")
+                date_to_db = d.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
         # Build a descriptive default filename
         from datetime import datetime as _dt
         parts = ["Tracker"]
@@ -232,17 +289,31 @@ class TrackerTab(ttk.Frame):
 
         path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
-            filetypes=[("Excel files", "*.xlsx")],
+            filetypes=[
+                ("Excel files", "*.xlsx"),
+                ("CSV files", "*.csv"),
+            ],
             initialfile=default_name,
         )
         if path:
             try:
                 svc = ExportService(db=self._tracker._db, config=self._tracker._config)
-                svc.export_to_excel(
-                    path,
-                    district=district_filter,
-                    status=status_filter,
-                )
+                if path.lower().endswith(".csv"):
+                    svc.export_to_csv(
+                        path,
+                        district=district_filter,
+                        status=status_filter,
+                        date_from=date_from_db,
+                        date_to=date_to_db,
+                    )
+                else:
+                    svc.export_to_excel(
+                        path,
+                        district=district_filter,
+                        status=status_filter,
+                        date_from=date_from_db,
+                        date_to=date_to_db,
+                    )
                 count = len(self._tree.get_children())
                 show_info(
                     "Export Complete",

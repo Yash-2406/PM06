@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import csv
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -187,6 +188,42 @@ class ExportService:
         logger.info("Exported %d cases to %s", total, output_path)
         return output_path
 
+    # ── CSV Export ──────────────────────────────────────────────
+
+    def export_to_csv(
+        self,
+        output_path: str | Path,
+        district: Optional[str] = None,
+        zone: Optional[str] = None,
+        status: Optional[CaseStatus] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+    ) -> Path:
+        """Export filtered cases to a CSV file."""
+        output_path = Path(output_path)
+        status_str = status.value if status else None
+
+        cases = self._repo.list_all(
+            district=district, zone=zone, status=status_str,
+            date_from=date_from, date_to=date_to,
+        )
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f)
+            writer.writerow(TRACKER_COLUMNS)
+            for sl_no, case in enumerate(cases, start=1):
+                row = case_to_tracker_row(case, sl_no=sl_no)
+                writer.writerow([
+                    row.sl_no, row.scheme_no, row.n_no, row.district,
+                    row.zone, row.date_received, row.date_processed,
+                    row.status, row.remarks, row.amount_rs,
+                    row.correction_suggested, row.correction_details,
+                ])
+
+        logger.info("Exported %d cases to CSV %s", len(cases), output_path)
+        return output_path
+
     # ── MIS Summary ─────────────────────────────────────────────
 
     def get_mis_data(self) -> Dict[str, Any]:
@@ -205,6 +242,8 @@ class ExportService:
         amount_by_district = self._repo.sum_by_district()
         amount_by_status = self._repo.sum_by_status()
         monthly_trend = self._repo.count_by_month()
+        by_engineer = self._repo.count_by_engineer()
+        rejection_reasons = self._repo.rejection_reasons()
 
         return {
             "district_status_counts": district_status_counts,
@@ -218,6 +257,8 @@ class ExportService:
             "amount_by_district": amount_by_district,
             "amount_by_status": amount_by_status,
             "monthly_trend": monthly_trend,
+            "by_engineer": by_engineer,
+            "rejection_reasons": rejection_reasons,
         }
 
     def export_mis_to_excel(self, output_path: str | Path) -> Path:
@@ -311,6 +352,29 @@ class ExportService:
                 row_total += c
             row_vals.append(row_total)
             ws7.append(row_vals)
+
+        # ── Sheet 8: By Engineer ──────────────────────────────
+        ws8 = wb.create_sheet("By Engineer")
+        ws8.append(["Engineer", "Cases", "Amount (₹)"])
+        for cell in ws8[1]:
+            cell.font = header_font_w
+            cell.fill = header_fill
+        for row in data.get("by_engineer", []):
+            ws8.append([row["engineer"], row["cnt"], row["total"]])
+
+        # ── Sheet 9: Rejection Reasons ──────────────────────────
+        ws9 = wb.create_sheet("Rejection Reasons")
+        ws9.append(["Order No", "District", "Rejection Reason", "Date"])
+        for cell in ws9[1]:
+            cell.font = header_font_w
+            cell.fill = header_fill
+        for row in data.get("rejection_reasons", []):
+            ws9.append([
+                row.get("order_no", ""),
+                row.get("district_code", ""),
+                row.get("correction_details", ""),
+                row.get("dt", ""),
+            ])
 
         # Auto-fit columns for all sheets
         for sheet in wb.worksheets:

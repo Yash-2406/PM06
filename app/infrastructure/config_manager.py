@@ -127,6 +127,22 @@ class ConfigManager:
             pass  # best-effort; may fail on some Windows configs
         logger.info("Created default config at %s", self._config_path)
 
+    def reset_to_defaults(self) -> None:
+        """Reset config.ini to factory defaults (preserves window geometry)."""
+        # Preserve window geometry so user doesn't lose position
+        geom = {}
+        if self._config.has_section("Window"):
+            geom = dict(self._config["Window"])
+        self._create_default_config()
+        if geom:
+            if not self._config.has_section("Window"):
+                self._config.add_section("Window")
+            for k, v in geom.items():
+                self._config.set("Window", k, v)
+            with open(self._config_path, "w", encoding="utf-8") as f:
+                self._config.write(f)
+        logger.info("Config reset to defaults")
+
     def _load_json_config(self, filename: str) -> dict:
         """Load a JSON file from the config/ directory.
 

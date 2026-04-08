@@ -137,6 +137,20 @@ class MISTab(ttk.Frame):
             [("Month", 120), ("Cases", 80), ("Amount (₹)", 160)],
         )
 
+        # ── Engineer-wise breakdown ────────────────────────────
+        self._add_section_label("By Engineer")
+        self._engineer_tree = self._make_tree(
+            ("engineer", "count", "amount"),
+            [("Engineer", 180), ("Cases", 80), ("Amount (₹)", 160)],
+        )
+
+        # ── Rejection Reasons ───────────────────────────────────
+        self._add_section_label("Rejection Reasons")
+        self._rejection_tree = self._make_tree(
+            ("order_no", "district", "reason", "date"),
+            [("Order No", 140), ("District", 100), ("Reason", 300), ("Date", 120)],
+        )
+
         # ── District × Status matrix ───────────────────────────
         self._add_section_label("District × Status Matrix")
         self._matrix_tree = ttk.Treeview(
@@ -220,6 +234,25 @@ class MISTab(ttk.Frame):
             for r in data.get("monthly_trend", [])
         ]
         self._populate_tree(self._trend_tree, trend_rows)
+
+        # Engineer breakdown
+        eng_rows = [
+            (r["engineer"], r["cnt"], format_indian_amount(r["total"]))
+            for r in data.get("by_engineer", [])
+        ]
+        self._populate_tree(self._engineer_tree, eng_rows)
+
+        # Rejection reasons
+        rej_rows = [
+            (
+                r.get("order_no", ""),
+                r.get("district_code", ""),
+                r.get("correction_details", ""),
+                r.get("dt", ""),
+            )
+            for r in data.get("rejection_reasons", [])
+        ]
+        self._populate_tree(self._rejection_tree, rej_rows)
 
         # District × Status matrix
         self._refresh_matrix(data)

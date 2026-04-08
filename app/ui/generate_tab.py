@@ -7,7 +7,10 @@ Process button runs the pipeline in a WorkerThread.
 from __future__ import annotations
 
 import logging
+import os
+import threading
 import tkinter as tk
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Optional
 
 import ttkbootstrap as ttk
@@ -37,6 +40,7 @@ class GenerateTab(ttk.Frame):
         super().__init__(master, **kwargs)
         self._gen_service = generator_service
         self._on_generated = on_generated
+        self._cancel_event: Optional[threading.Event] = None
 
         self._build_ui()
 
@@ -101,6 +105,15 @@ class GenerateTab(ttk.Frame):
         )
         self._reset_btn.pack(pady=(5, 0))
 
+        self._cancel_btn = ttk.Button(
+            btn_frame,
+            text="✕  Cancel",
+            command=self._on_cancel,
+            bootstyle="danger-outline",
+            width=15,
+        )
+        # Hidden until generation starts
+
         # Progress
         self._progress = ProgressOverlay(self)
         self._progress.pack(fill=X, padx=20, pady=(0, 10))
@@ -118,7 +131,19 @@ class GenerateTab(ttk.Frame):
             )
             return
 
+        # Pre-validate selected files
+        errors = self._validate_files(scheme, sv, pm06)
+        if errors:
+            show_error(
+                "File Validation Failed",
+                "\n".join(errors),
+                parent=self,
+            )
+            return
+
         self._process_btn.configure(state=DISABLED)
+        self._cancel_event = threading.Event()
+        self._cancel_btn.pack(pady=(5, 0))
 
         def _progress(percent: int, message: str) -> None:
             self.after(0, lambda: self._progress.update_progress(percent, message))
@@ -132,10 +157,13 @@ class GenerateTab(ttk.Frame):
             pm06_excel_path=pm06,
             progress_cb=_progress,
             done_cb=_done,
+            cancel_event=self._cancel_event,
         )
 
     def _on_done(self, case: Case | None, error: Exception | None) -> None:
         self._process_btn.configure(state=NORMAL)
+        self._cancel_btn.pack_forget()
+        self._cancel_event = None
         if error:
             show_error(
                 "Generation Failed",
@@ -154,6 +182,53 @@ class GenerateTab(ttk.Frame):
             )
             if self._on_generated:
                 self._on_generated(case)
+
+    # ── File pre-validation ───────────────────────────────────
+
+    _EXPECTED_EXT = {
+        "Scheme PDF": ".pdf",
+        "Site Visit PDF": ".pdf",
+        "PM06 Excel": ".xlsx",
+    }
+    _MAX_FILE_SIZE_MB = 50
+
+    def _validate_files(
+        self,
+        scheme: str | None,
+        sv: str | None,
+        pm06: str | None,
+    ) -> list[str]:
+        """Validate files before processing. Returns list of error messages."""
+        errors: list[str] = []
+        for label, fpath, ext in [
+            ("Scheme PDF", scheme, ".pdf"),
+            ("Site Visit PDF", sv, ".pdf"),
+            ("PM06 Excel", pm06, ".xlsx"),
+        ]:
+            if not fpath:
+                continue
+            p = Path(fpath)
+            if not p.exists():
+                errors.append(f"{label}: File not found — {p.name}")
+                continue
+            if p.suffix.lower() != ext:
+                errors.append(
+                    f"{label}: Expected {ext} file, got '{p.suffix}'"
+                )
+            size_mb = p.stat().st_size / (1024 * 1024)
+            if size_mb > self._MAX_FILE_SIZE_MB:
+                errors.append(
+                    f"{label}: File too large ({size_mb:.1f} MB > {self._MAX_FILE_SIZE_MB} MB)"
+                )
+            if p.stat().st_size == 0:
+                errors.append(f"{label}: File is empty (0 bytes)")
+        return errors
+
+    def _on_cancel(self) -> None:
+        if self._cancel_event:
+            self._cancel_event.set()
+            self._cancel_btn.configure(state=DISABLED)
+            self._progress.update_progress(0, "Cancelling…")
 
     def _on_reset(self) -> None:
         self._scheme_drop.reset()

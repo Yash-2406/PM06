@@ -54,9 +54,14 @@ class TrackerService:
         district: Optional[str] = None,
         zone: Optional[str] = None,
         status: Optional[CaseStatus] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
     ) -> List[Case]:
         """Return filtered list of cases."""
-        return self._repo.list_all(district=district, zone=zone, status=status)
+        return self._repo.list_all(
+            district=district, zone=zone, status=status,
+            date_from=date_from, date_to=date_to,
+        )
 
     # ── Status transitions ──────────────────────────────────────
 

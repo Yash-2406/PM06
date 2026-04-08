@@ -56,6 +56,7 @@ class GeneratorService:
         site_visit_pdf_path: str | Path | None = None,
         pm06_excel_path: str | Path | None = None,
         progress_cb: ProgressCallback | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> Case:
         """Run the full pipeline synchronously. Returns the saved Case.
 
@@ -63,18 +64,25 @@ class GeneratorService:
         """
         cb = progress_cb or (lambda p, m: None)
 
+        def _check_cancel() -> None:
+            if cancel_event and cancel_event.is_set():
+                raise InterruptedError("Generation cancelled by user")
+
         try:
             # 1 ── Extract ───────────────────────────────────────
+            _check_cancel()
             cb(5, "Extracting scheme PDF…")
             scheme_data = self._extract_file(scheme_pdf_path, FileType.SCHEME_PDF)
 
             cb(20, "Extracting site-visit form…")
             sv_data = self._extract_file(site_visit_pdf_path, FileType.SITE_VISIT_PDF)
 
+            _check_cancel()
             cb(35, "Extracting PM06 Excel…")
             pm06_data = self._extract_file(pm06_excel_path, FileType.PM06_EXCEL)
 
             # 2 ── Merge into Case ───────────────────────────────
+            _check_cancel()
             cb(50, "Merging extracted data…")
             case = self._merge_into_case(scheme_data, sv_data, pm06_data)
 
@@ -113,6 +121,7 @@ class GeneratorService:
             self._derive_capex_year(case)
 
             # 5 ── Validate ──────────────────────────────────────
+            _check_cancel()
             cb(60, "Validating…")
             validation = self._validator.validate(case)
             case.validation_result = validation
@@ -127,6 +136,7 @@ class GeneratorService:
                     cost_img_path.unlink(missing_ok=True)
 
             # 7 ── Build DOCX ────────────────────────────────────
+            _check_cancel()
             cb(80, "Building Executive Summary…")
             output_dir = Path(self._config.output_dir)
             safe_order = re.sub(r'[^a-zA-Z0-9._-]', '_', case.order_no or "UNKNOWN")
@@ -236,13 +246,15 @@ class GeneratorService:
         pm06_excel_path: str | Path | None = None,
         progress_cb: ProgressCallback | None = None,
         done_cb: Callable[[Case | None, Exception | None], None] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> threading.Thread:
         """Start generation on a daemon thread. Returns the Thread object."""
 
         def _worker() -> None:
             try:
                 case = self.generate(
-                    scheme_pdf_path, site_visit_pdf_path, pm06_excel_path, progress_cb
+                    scheme_pdf_path, site_visit_pdf_path, pm06_excel_path,
+                    progress_cb, cancel_event=cancel_event,
                 )
                 if done_cb:
                     done_cb(case, None)

@@ -81,7 +81,7 @@ class CaseRepository:
                     case.wbs_no,
                     case.work_type.value if case.work_type else None,
                     case.area_type,
-                    None,  # capex_year
+                    case.capex_year,
                     _to_float(case.grand_total),
                     _to_float(case.bom_total),
                     _to_float(case.bos_total),
@@ -137,10 +137,15 @@ class CaseRepository:
                 updated_at = datetime.strptime(row["updated_at"], "%Y-%m-%d %H:%M:%S")
             except (ValueError, TypeError):
                 pass
+        # Restore all_notification_nos from CSV string
+        notif_csv = row.get("all_notification_nos") or ""
+        all_notifs = [n.strip() for n in notif_csv.split(",") if n.strip()]
+
         return Case(
             id=row.get("id"),
             order_no=row.get("order_no"),
             notification_no=row.get("notification_no"),
+            all_notification_nos=all_notifs,
             applicant_name=row.get("applicant_name"),
             address=row.get("address"),
             pin_code=row.get("pin_code"),
@@ -149,6 +154,7 @@ class CaseRepository:
             wbs_no=row.get("wbs_no"),
             work_type=wt,
             area_type=row.get("area_type"),
+            capex_year=row.get("capex_year"),
             grand_total=row.get("estimated_cost"),
             bom_total=row.get("bom_total"),
             bos_total=row.get("bos_total"),
@@ -384,5 +390,29 @@ class CaseRepository:
             "SELECT COALESCE(strftime('%Y-%m', created_at), 'UNKNOWN') as month, "
             "COUNT(*) as cnt, COALESCE(SUM(estimated_cost), 0) as total "
             "FROM cases GROUP BY month ORDER BY month"
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    def count_by_engineer(self) -> list[dict]:
+        """Return [{engineer, count, total}] from generated_docs."""
+        cursor = self._conn.execute(
+            "SELECT COALESCE(g.engineer_name, 'Unknown') as engineer, "
+            "COUNT(DISTINCT c.id) as cnt, "
+            "COALESCE(SUM(c.estimated_cost), 0) as total "
+            "FROM cases c "
+            "INNER JOIN generated_docs g ON g.case_id = c.id "
+            "GROUP BY engineer ORDER BY cnt DESC"
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    def rejection_reasons(self) -> list[dict]:
+        """Return [{order_no, district_code, correction_details, date}] for rejected cases."""
+        cursor = self._conn.execute(
+            "SELECT order_no, district_code, correction_details, "
+            "COALESCE(updated_at, created_at) as dt "
+            "FROM cases "
+            "WHERE status = 'Rejected' AND correction_details IS NOT NULL "
+            "AND correction_details != '' "
+            "ORDER BY dt DESC"
         )
         return [dict(row) for row in cursor.fetchall()]

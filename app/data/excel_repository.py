@@ -290,7 +290,6 @@ class ExcelRepository:
                 pass
             wb.close()
             raise
-            raise
 
     def read_all_rows(self) -> list[dict]:
         """Read all data rows from the tracker file."""
