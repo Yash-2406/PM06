@@ -7,6 +7,7 @@ Runs on a worker thread; reports progress via callback.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 from dataclasses import fields as dc_fields
 from pathlib import Path
@@ -128,7 +129,7 @@ class GeneratorService:
             # 7 ── Build DOCX ────────────────────────────────────
             cb(80, "Building Executive Summary…")
             output_dir = Path(self._config.output_dir)
-            safe_order = (case.order_no or "UNKNOWN").replace("/", "_").replace("\\", "_")
+            safe_order = re.sub(r'[^a-zA-Z0-9._-]', '_', case.order_no or "UNKNOWN")
             output_name = f"Executive_Summary_{safe_order}.docx"
 
             # Determine source folder: save alongside input files

@@ -240,6 +240,14 @@ class ValidatorService:
                 message="",
                 is_blocking=False,
             )
+        if gt < 0:
+            return ValidationCheck(
+                field="grand_total_range",
+                rule="Grand Total must not be negative",
+                passed=False,
+                message=f"Grand Total is negative (₹{gt:,.2f})",
+                is_blocking=True,
+            )
         # Use work-type-specific bounds when available
         lo, hi = COST_LOWER_BOUND, COST_UPPER_BOUND
         if case.work_type and case.work_type in _COST_BOUNDS:

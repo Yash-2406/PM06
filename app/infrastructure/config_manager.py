@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import configparser
 import json
+import os
+import stat
 import threading
 from pathlib import Path
 from typing import Any, Optional
@@ -119,6 +121,10 @@ class ConfigManager:
         }
         with open(self._config_path, "w", encoding="utf-8") as f:
             self._config.write(f)
+        try:
+            os.chmod(self._config_path, stat.S_IRUSR | stat.S_IWUSR)  # 0o600
+        except OSError:
+            pass  # best-effort; may fail on some Windows configs
         logger.info("Created default config at %s", self._config_path)
 
     def _load_json_config(self, filename: str) -> dict:

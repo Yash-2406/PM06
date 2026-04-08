@@ -99,7 +99,7 @@ def _space_material_desc(desc: str) -> str:
     """
     if not desc:
         return desc
-    s = desc.strip()
+    s = desc[:500].strip()  # cap length to prevent ReDoS on crafted input
 
     # Known SAP tokens — split these off as standalone words
     # Unit tokens (KV, KVA) should NOT be split from preceding digits (250KVA, 11KV)

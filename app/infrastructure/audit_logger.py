@@ -32,6 +32,14 @@ class AuditLogger:
             return self._db.connection
         return sqlite3.connect(self._db_path)
 
+    _MAX_LOG_LEN = 200  # max chars stored per text field in audit log
+
+    @staticmethod
+    def _truncate(value: Optional[str]) -> Optional[str]:
+        if value and len(value) > AuditLogger._MAX_LOG_LEN:
+            return value[: AuditLogger._MAX_LOG_LEN] + "…"
+        return value
+
     def log(
         self,
         action: str,
@@ -61,9 +69,9 @@ class AuditLogger:
                 (
                     case_id,
                     action,
-                    old_value,
-                    new_value,
-                    details,
+                    self._truncate(old_value),
+                    self._truncate(new_value),
+                    self._truncate(details),
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     engineer_name,
                 ),
@@ -78,15 +86,16 @@ class AuditLogger:
     def get_history(self, case_id: int) -> list[dict]:
         """Retrieve full audit trail for a case."""
         try:
-            conn = sqlite3.connect(self._db_path)
+            conn = self._get_connection()
             conn.row_factory = sqlite3.Row
             cursor = conn.execute(
                 "SELECT * FROM audit_log WHERE case_id = ? ORDER BY performed_at",
                 (case_id,),
             )
             rows = [dict(row) for row in cursor.fetchall()]
-            conn.close()
+            if self._db is None:
+                conn.close()
             return rows
-        except sqlite3.Error as e:
+        except (sqlite3.Error, TypeError) as e:
             logger.error("Failed to read audit log: %s", e)
             return []
